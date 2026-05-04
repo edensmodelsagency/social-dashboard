@@ -48,8 +48,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `Apify error: ${txt}` }, { status: 500 })
   }
 
-  const runJson = await runRes.json()
-  const runId = runJson?.data?.id
+  const runId = (await runRes.json())?.data?.id
   if (!runId) return NextResponse.json({ error: 'No run ID returned' }, { status: 500 })
 
   return NextResponse.json({ runId })
