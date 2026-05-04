@@ -19,16 +19,16 @@
 }
 
 .dark {
-  --bg: #0a0a0a;
-  --bg-subtle: #111113;
-  --bg-card: #18181b;
-  --bg-sidebar: #111113;
-  --border: #27272a;
-  --text: #fafafa;
-  --text-2: #a1a1aa;
-  --text-3: #52525b;
+  --bg: #0f1117;
+  --bg-subtle: #1a1f2e;
+  --bg-card: #1e2130;
+  --bg-sidebar: #161b27;
+  --border: #2d3348;
+  --text: #e8ecf4;
+  --text-2: #9ba3b5;
+  --text-3: #4e5568;
   --accent: #818cf8;
-  --ig: #e1306c;
+  --ig: #f0476c;
   --tt: #ffffff;
   --green: #4ade80;
   --red: #f87171;
@@ -131,7 +131,7 @@ input[type="text"]::placeholder {
 }
 
 .btn:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
@@ -150,15 +150,15 @@ input[type="text"]::placeholder {
   color: var(--text-3);
 }
 .badge-loading {
-  background: #1d4ed820;
+  background: rgba(96,165,250,0.15);
   color: #60a5fa;
 }
 .badge-done {
-  background: #16a34a20;
+  background: rgba(74,222,128,0.15);
   color: var(--green);
 }
 .badge-error {
-  background: #dc262620;
+  background: rgba(248,113,113,0.15);
   color: var(--red);
 }
 
@@ -173,14 +173,6 @@ input[type="text"]::placeholder {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
-}
-
-.pulse {
-  animation: pulse 1.5s ease-in-out infinite;
-}
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
 }
 
 .skeleton {

@@ -12,21 +12,48 @@ interface Props {
 
 interface CellData {
   views: number
+  engagement: number
   post?: Post
 }
 
+// Purple → pink gradient steps (visible on dark bg)
+const HEAT_COLORS = [
+  '#1e2130', // empty
+  '#3b1f4e', // very low
+  '#6b21a8', // low
+  '#9333ea', // medium
+  '#c026d3', // high
+  '#e1306c', // very high
+]
+
+function getColor(views: number, max: number): string {
+  if (views === 0 || max === 0) return HEAT_COLORS[0]
+  const ratio = views / max
+  if (ratio < 0.05) return HEAT_COLORS[1]
+  if (ratio < 0.2) return HEAT_COLORS[2]
+  if (ratio < 0.4) return HEAT_COLORS[3]
+  if (ratio < 0.7) return HEAT_COLORS[4]
+  return HEAT_COLORS[5]
+}
+
 export function PostHeatmap({ posts }: Props) {
-  const [tooltip, setTooltip] = useState<{ post: Post; x: number; y: number } | null>(null)
+  const [tooltip, setTooltip] = useState<{
+    post: Post
+    x: number
+    y: number
+  } | null>(null)
 
   const { grid, days, maxViews } = useMemo(() => {
+    // Use 30 days so we capture all fetched posts
     const today = startOfDay(new Date())
     const days: Date[] = []
-    for (let d = 9; d >= 0; d--) {
+    for (let d = 29; d >= 0; d--) {
       days.push(subDays(today, d))
     }
 
+    // grid[hour][dayIdx]
     const grid: CellData[][] = Array.from({ length: 24 }, () =>
-      Array.from({ length: 10 }, () => ({ views: 0 }))
+      Array.from({ length: 30 }, () => ({ views: 0, engagement: 0 }))
     )
 
     let max = 0
@@ -40,80 +67,84 @@ export function PostHeatmap({ posts }: Props) {
 
       const hour = postDate.getHours()
       const cell = grid[hour][dayIdx]
-      if (!cell.post || post.views > cell.views) {
+      const score = post.views || post.likes || 0
+      if (!cell.post || score > cell.views) {
         cell.post = post
-        cell.views = post.views
+        cell.views = score
+        cell.engagement = post.engagementRate
       }
-      if (post.views > max) max = post.views
+      if (score > max) max = score
     }
 
     return { grid, days, maxViews: max || 1 }
   }, [posts])
 
-  function getColor(views: number): string {
-    if (views === 0) return 'var(--bg-subtle)'
-    const intensity = Math.min(views / maxViews, 1)
-    if (intensity < 0.2) return '#312e81'
-    if (intensity < 0.4) return '#4338ca'
-    if (intensity < 0.6) return '#4f46e5'
-    if (intensity < 0.8) return '#6366f1'
-    return '#818cf8'
-  }
+  // Only show every 3rd hour label (0,3,6,9,12,15,18,21)
+  const showHourLabel = (h: number) => h % 3 === 0
 
-  const cellSize = 28
-  const hourLabels = ['00', '03', '06', '09', '12', '15', '18', '21']
+  // Show date labels every 5 days on mobile, every 3 on desktop
+  const showDayLabel = (i: number) => i % 5 === 0 || i === 29
+
+  const CELL = 22
+  const GAP = 2
 
   return (
     <div className="card" style={{ padding: 20 }}>
-      <div style={{ marginBottom: 16 }}>
+      <div style={{ marginBottom: 14 }}>
         <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>
           Δραστηριότητα Δημοσίευσης
         </div>
         <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2 }}>
-          Τελευταίες 10 ημέρες · Εντάσεις χρώματος = προβολές
+          Τελευταίες 30 ημέρες · ώρα × ημέρα · χρώμα = προβολές
         </div>
       </div>
 
-      <div style={{ overflowX: 'auto' }}>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {/* Hour labels */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-            <div style={{ height: 28 }} />
+      <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
+        <div style={{ display: 'flex', gap: GAP, minWidth: 'max-content' }}>
+          {/* Hour label column */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: GAP, flexShrink: 0 }}>
+            {/* spacer for date row */}
+            <div style={{ height: 20 }} />
             {Array.from({ length: 24 }, (_, h) => (
               <div
                 key={h}
                 style={{
-                  height: cellSize,
-                  width: 28,
+                  height: CELL,
+                  width: 30,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'flex-end',
                   paddingRight: 6,
                   fontSize: 10,
-                  color: hourLabels.includes(String(h).padStart(2, '0'))
-                    ? 'var(--text-2)'
-                    : 'transparent',
+                  color: showHourLabel(h) ? 'var(--text-2)' : 'transparent',
+                  userSelect: 'none',
                 }}
               >
-                {String(h).padStart(2, '0')}
+                {String(h).padStart(2, '0')}:00
               </div>
             ))}
           </div>
 
-          {/* Grid columns (days) */}
+          {/* Day columns */}
           {days.map((day, dayIdx) => (
-            <div key={dayIdx} style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-              {/* Day label */}
+            <div
+              key={dayIdx}
+              style={{ display: 'flex', flexDirection: 'column', gap: GAP, flexShrink: 0 }}
+            >
+              {/* Date label */}
               <div
                 style={{
-                  height: 28,
-                  width: cellSize,
+                  height: 20,
+                  width: CELL,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: 10,
-                  color: 'var(--text-2)',
-                  textAlign: 'center',
+                  fontSize: 9,
+                  color: showDayLabel(dayIdx) ? 'var(--text-2)' : 'transparent',
+                  userSelect: 'none',
+                  whiteSpace: 'nowrap',
+                  transform: 'rotate(-30deg)',
+                  transformOrigin: 'center',
                 }}
               >
                 {format(day, 'dd/MM', { locale: el })}
@@ -123,27 +154,41 @@ export function PostHeatmap({ posts }: Props) {
               {Array.from({ length: 24 }, (_, hour) => {
                 const cell = grid[hour][dayIdx]
                 const hasPost = cell.post != null
+                const bg = getColor(cell.views, maxViews)
 
                 return (
                   <div
                     key={hour}
-                    style={{
-                      width: cellSize,
-                      height: cellSize,
-                      background: getColor(cell.views),
-                      borderRadius: 4,
-                      cursor: hasPost ? 'pointer' : 'default',
-                      border: hasPost ? '1px solid rgba(129,140,248,0.4)' : '1px solid transparent',
-                      transition: 'transform 0.1s',
-                      position: 'relative',
-                    }}
                     onMouseEnter={(e) => {
-                      if (cell.post) {
-                        const rect = (e.target as HTMLElement).getBoundingClientRect()
-                        setTooltip({ post: cell.post, x: rect.left, y: rect.bottom + 6 })
+                      if (hasPost && cell.post) {
+                        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                        setTooltip({
+                          post: cell.post,
+                          x: Math.min(rect.left, window.innerWidth - 220),
+                          y: rect.bottom + 8,
+                        })
                       }
                     }}
                     onMouseLeave={() => setTooltip(null)}
+                    style={{
+                      width: CELL,
+                      height: CELL,
+                      borderRadius: 3,
+                      background: bg,
+                      cursor: hasPost ? 'pointer' : 'default',
+                      border: hasPost
+                        ? `1px solid ${bg === HEAT_COLORS[5] ? '#f0476c88' : '#9333ea55'}`
+                        : '1px solid transparent',
+                      transition: 'transform 0.08s, opacity 0.08s',
+                    }}
+                    onMouseOver={(e) => {
+                      if (hasPost) {
+                        ;(e.currentTarget as HTMLElement).style.transform = 'scale(1.25)'
+                        ;(e.currentTarget as HTMLElement).style.opacity = '0.9'
+                      }
+                    }}
+                    onFocus={() => {}}
+                    onBlur={() => {}}
                   />
                 )
               })}
@@ -163,14 +208,21 @@ export function PostHeatmap({ posts }: Props) {
           color: 'var(--text-3)',
         }}
       >
-        <span>Λίγες</span>
-        {['#312e81', '#4338ca', '#4f46e5', '#6366f1', '#818cf8'].map((c) => (
+        <span>Χαμηλές</span>
+        {HEAT_COLORS.map((c, i) => (
           <div
-            key={c}
-            style={{ width: 14, height: 14, background: c, borderRadius: 3 }}
+            key={i}
+            style={{
+              width: 14,
+              height: 14,
+              background: c,
+              borderRadius: 3,
+              border: '1px solid rgba(255,255,255,0.08)',
+            }}
           />
         ))}
-        <span>Πολλές</span>
+        <span>Υψηλές</span>
+        <span style={{ marginLeft: 8, color: 'var(--text-3)' }}>προβολές</span>
       </div>
 
       {/* Tooltip */}
@@ -182,22 +234,45 @@ export function PostHeatmap({ posts }: Props) {
             top: tooltip.y,
             background: 'var(--bg-card)',
             border: '1px solid var(--border)',
-            borderRadius: 8,
-            padding: '10px 14px',
+            borderRadius: 10,
+            padding: '12px 16px',
             fontSize: 12,
             zIndex: 9999,
             pointerEvents: 'none',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-            minWidth: 180,
+            boxShadow: '0 12px 32px rgba(0,0,0,0.5)',
+            minWidth: 190,
           }}
         >
-          <div style={{ fontWeight: 600, marginBottom: 6, color: 'var(--text)' }}>
-            {tooltip.post.type} · {format(new Date(tooltip.post.date), 'dd/MM HH:mm')}
+          <div
+            style={{
+              fontWeight: 700,
+              marginBottom: 8,
+              color: 'var(--text)',
+              fontSize: 13,
+            }}
+          >
+            {tooltip.post.type} ·{' '}
+            {format(new Date(tooltip.post.date), 'dd MMM, HH:mm', { locale: el })}
           </div>
-          <div style={{ color: 'var(--text-2)', display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 4,
+              color: 'var(--text-2)',
+            }}
+          >
             <span>👁 {fmt(tooltip.post.views)} προβολές</span>
             <span>❤️ {fmt(tooltip.post.likes)} likes</span>
             <span>💬 {fmt(tooltip.post.comments)} σχόλια</span>
+            {tooltip.post.shares > 0 && (
+              <span>🔁 {fmt(tooltip.post.shares)} κοινοποιήσεις</span>
+            )}
+            <span
+              style={{ color: 'var(--accent)', fontWeight: 600, marginTop: 2 }}
+            >
+              Eng. {tooltip.post.engagementRate.toFixed(2)}%
+            </span>
           </div>
         </div>
       )}

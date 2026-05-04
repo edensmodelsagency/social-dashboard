@@ -4,7 +4,7 @@ import { Post } from '@/lib/types'
 import { fmt } from '@/lib/parsers'
 import { format } from 'date-fns'
 import { el } from 'date-fns/locale'
-import { Eye, Heart, Bookmark, MessageCircle, TrendingUp } from 'lucide-react'
+import { Eye, Heart, Bookmark, MessageCircle, TrendingUp, Share2 } from 'lucide-react'
 import Image from 'next/image'
 
 interface Props {
@@ -12,15 +12,29 @@ interface Props {
   platform: 'instagram' | 'tiktok'
 }
 
-const typeBadge: Record<string, { bg: string; color: string; label: string }> = {
-  Reel: { bg: '#e1306c22', color: '#e1306c', label: 'Reel' },
-  Video: { bg: '#ffffff15', color: '#ffffff', label: 'Video' },
-  Photo: { bg: '#0ea5e922', color: '#0ea5e9', label: 'Photo' },
-  Carousel: { bg: '#f59e0b22', color: '#f59e0b', label: 'Carousel' },
+const RANK_STYLE = [
+  { border: '#f59e0b', glow: 'rgba(245,158,11,0.25)', badge: '#f59e0b', label: '🥇' },
+  { border: '#9ca3af', glow: 'rgba(156,163,175,0.2)', badge: '#9ca3af', label: '🥈' },
+  { border: '#cd7c3a', glow: 'rgba(205,124,58,0.2)', badge: '#cd7c3a', label: '🥉' },
+  { border: '#2d3348',  glow: 'transparent',           badge: '#4e5568', label: '4' },
+]
+
+const TYPE_BADGE: Record<string, { bg: string; color: string }> = {
+  Reel:     { bg: 'rgba(240,71,108,0.18)', color: '#f0476c' },
+  Video:    { bg: 'rgba(129,140,248,0.18)', color: '#818cf8' },
+  Photo:    { bg: 'rgba(14,165,233,0.18)',  color: '#38bdf8' },
+  Carousel: { bg: 'rgba(245,158,11,0.18)', color: '#fbbf24' },
 }
 
 export function TopPosts({ posts, platform }: Props) {
-  const top4 = [...posts].sort((a, b) => b.views - a.views).slice(0, 4)
+  const top4 = [...posts]
+    .sort((a, b) => {
+      // Primary sort: views, fallback to likes if no views
+      const aScore = a.views > 0 ? a.views : a.likes
+      const bScore = b.views > 0 ? b.views : b.likes
+      return bScore - aScore
+    })
+    .slice(0, 4)
 
   if (top4.length === 0) {
     return (
@@ -31,7 +45,7 @@ export function TopPosts({ posts, platform }: Props) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          minHeight: 160,
+          minHeight: 260,
           color: 'var(--text-3)',
           fontSize: 13,
         }}
@@ -52,45 +66,65 @@ export function TopPosts({ posts, platform }: Props) {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(2, 1fr)',
+          gap: 10,
+        }}
+      >
         {top4.map((post, idx) => {
-          const badge = typeBadge[post.type] || typeBadge.Photo
+          const rank = RANK_STYLE[idx]
+          const badge = TYPE_BADGE[post.type] || TYPE_BADGE.Photo
+          const primaryMetric = post.views > 0 ? post.views : post.likes
+          const primaryLabel = post.views > 0 ? 'Προβολές' : 'Likes'
+
           return (
             <div
               key={post.id}
-              className="card-sm"
-              style={{ padding: 14, position: 'relative', overflow: 'hidden' }}
+              style={{
+                background: 'var(--bg-card)',
+                border: `1px solid ${rank.border}`,
+                boxShadow: `0 0 12px ${rank.glow}`,
+                borderRadius: 10,
+                padding: 12,
+                position: 'relative',
+                overflow: 'hidden',
+              }}
             >
-              {/* Rank badge */}
+              {/* Rank label */}
               <div
                 style={{
                   position: 'absolute',
-                  top: 10,
-                  right: 10,
-                  width: 22,
-                  height: 22,
+                  top: 8,
+                  right: 8,
+                  width: 26,
+                  height: 26,
                   borderRadius: '50%',
-                  background: idx === 0 ? '#f59e0b' : idx === 1 ? '#9ca3af' : idx === 2 ? '#cd7c3a' : 'var(--bg-subtle)',
+                  background: rank.badge + '33',
+                  border: `1px solid ${rank.badge}66`,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: 11,
+                  fontSize: idx < 3 ? 14 : 11,
                   fontWeight: 700,
-                  color: idx < 3 ? 'white' : 'var(--text-3)',
+                  color: rank.badge,
+                  zIndex: 2,
                 }}
               >
-                {idx + 1}
+                {rank.label}
               </div>
 
               {/* Thumbnail */}
               <div
                 style={{
                   width: '100%',
-                  height: 110,
+                  height: 100,
                   borderRadius: 6,
                   overflow: 'hidden',
                   background: 'var(--bg-subtle)',
                   marginBottom: 10,
+                  border: '1px solid var(--border)',
                 }}
               >
                 {post.thumbnail ? (
@@ -98,7 +132,7 @@ export function TopPosts({ posts, platform }: Props) {
                     src={post.thumbnail}
                     alt=""
                     width={300}
-                    height={110}
+                    height={100}
                     style={{ objectFit: 'cover', width: '100%', height: '100%' }}
                     unoptimized
                   />
@@ -110,7 +144,7 @@ export function TopPosts({ posts, platform }: Props) {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: 32,
+                      fontSize: 28,
                     }}
                   >
                     {post.type === 'Reel' || post.type === 'Video' ? '🎬' : '🖼'}
@@ -119,46 +153,84 @@ export function TopPosts({ posts, platform }: Props) {
               </div>
 
               {/* Type + date */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  marginBottom: 8,
+                  flexWrap: 'wrap',
+                }}
+              >
                 <span
                   style={{
                     padding: '2px 7px',
                     borderRadius: 99,
                     fontSize: 10,
-                    fontWeight: 600,
+                    fontWeight: 700,
                     background: badge.bg,
                     color: badge.color,
                   }}
                 >
-                  {badge.label}
+                  {post.type}
                 </span>
-                <span style={{ fontSize: 11, color: 'var(--text-3)' }}>
-                  {post.date ? format(new Date(post.date), 'dd MMM yy', { locale: el }) : ''}
+                <span style={{ fontSize: 10, color: 'var(--text-3)' }}>
+                  {post.date
+                    ? format(new Date(post.date), 'dd MMM yy', { locale: el })
+                    : ''}
                 </span>
               </div>
 
-              {/* Stats grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                <Stat icon={<Eye size={12} />} label="Προβολές" value={fmt(post.views)} color="#818cf8" />
-                <Stat icon={<Heart size={12} />} label="Likes" value={fmt(post.likes)} color="#e1306c" />
-                <Stat icon={<Bookmark size={12} />} label="Αποθ." value={fmt(post.saves) === '0' ? '—' : fmt(post.saves)} color="#f59e0b" />
-                <Stat icon={<MessageCircle size={12} />} label="Σχόλια" value={fmt(post.comments)} color="#22c55e" />
+              {/* Primary metric big */}
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: 10, color: 'var(--text-3)', marginBottom: 1 }}>
+                  {primaryLabel}
+                </div>
+                <div
+                  style={{
+                    fontSize: 20,
+                    fontWeight: 800,
+                    color: 'var(--text)',
+                    letterSpacing: -0.5,
+                  }}
+                >
+                  {fmt(primaryMetric)}
+                </div>
+              </div>
+
+              {/* Stats mini grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
+                <MiniStat icon={<Heart size={10} />} label="Likes" value={fmt(post.likes)} color="#f0476c" />
+                <MiniStat icon={<MessageCircle size={10} />} label="Σχόλια" value={fmt(post.comments)} color="#4ade80" />
+                {post.saves > 0 && (
+                  <MiniStat icon={<Bookmark size={10} />} label="Αποθ." value={fmt(post.saves)} color="#fbbf24" />
+                )}
+                {platform === 'tiktok' && post.shares > 0 && (
+                  <MiniStat icon={<Share2 size={10} />} label="Κοιν." value={fmt(post.shares)} color="#38bdf8" />
+                )}
               </div>
 
               {/* Eng rate */}
               <div
                 style={{
                   marginTop: 8,
+                  paddingTop: 8,
+                  borderTop: '1px solid var(--border)',
                   display: 'flex',
                   alignItems: 'center',
                   gap: 4,
                   fontSize: 11,
-                  color: post.engagementRate >= 3 ? 'var(--green)' : 'var(--text-3)',
-                  fontWeight: 500,
+                  color:
+                    post.engagementRate >= 3
+                      ? 'var(--green)'
+                      : post.engagementRate >= 1
+                      ? 'var(--text-2)'
+                      : 'var(--text-3)',
+                  fontWeight: post.engagementRate >= 3 ? 600 : 400,
                 }}
               >
                 <TrendingUp size={11} />
-                Eng. Rate: {post.engagementRate.toFixed(2)}%
+                Eng. {post.engagementRate.toFixed(2)}%
               </div>
             </div>
           )
@@ -168,7 +240,7 @@ export function TopPosts({ posts, platform }: Props) {
   )
 }
 
-function Stat({
+function MiniStat({
   icon,
   label,
   value,
@@ -183,18 +255,20 @@ function Stat({
     <div
       style={{
         background: 'var(--bg-subtle)',
-        borderRadius: 6,
-        padding: '6px 8px',
+        borderRadius: 5,
+        padding: '5px 7px',
         display: 'flex',
         flexDirection: 'column',
         gap: 2,
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4, color, opacity: 0.8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 3, color, opacity: 0.85 }}>
         {icon}
-        <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{label}</span>
+        <span style={{ fontSize: 9, color: 'var(--text-3)', textTransform: 'uppercase' }}>
+          {label}
+        </span>
       </div>
-      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{value}</div>
+      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>{value}</div>
     </div>
   )
 }

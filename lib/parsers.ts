@@ -3,34 +3,61 @@ import { Post, ProfileData } from './types'
 export function parseInstagram(items: Record<string, unknown>[]): ProfileData {
   if (!items.length) return { followers: 0, following: 0, totalViews: 0, posts: [] }
 
-  const profileItem = (items.find((i) => i.followersCount != null) || items[0]) as Record<string, unknown>
-  const followers = (profileItem.followersCount as number) || 0
+  // Filter actual post items (not profile-only metadata)
+  const postItems = items.filter(
+    (i) => i.likesCount != null || i.likeCount != null || i.type != null
+  )
 
-  const posts: Post[] = items.map((item, idx) => {
+  // Profile data is embedded in each item via addParentData:true
+  const profileItem = (
+    postItems.find((i) => (i.followersCount as number) > 0) ||
+    postItems[0] ||
+    items[0]
+  ) as Record<string, unknown>
+
+  const followers = (profileItem.followersCount as number) || 0
+  const following =
+    (profileItem.followingCount as number) ||
+    (profileItem.followsCount as number) ||
+    0
+
+  const posts: Post[] = postItems.map((item, idx) => {
     const i = item as Record<string, unknown>
     const likes = (i.likesCount as number) || (i.likeCount as number) || 0
     const comments = (i.commentsCount as number) || (i.commentCount as number) || 0
     const views = (i.videoViewCount as number) || (i.videoPlayCount as number) || 0
-    const type = i.type === 'video' ? 'Reel' : i.type === 'sidecar' ? 'Carousel' : 'Photo'
+    const saves = (i.saves as number) || 0
+
+    let type: Post['type'] = 'Photo'
+    if (i.type === 'video') type = 'Reel'
+    else if (i.type === 'sidecar') type = 'Carousel'
 
     return {
       id: (i.id as string) || String(idx),
-      type: type as Post['type'],
-      date: (i.timestamp as string) || '',
+      type,
+      date: (i.timestamp as string) || (i.takenAtTimestamp ? new Date((i.takenAtTimestamp as number) * 1000).toISOString() : ''),
       views,
       likes,
-      saves: (i.saves as number) || 0,
+      saves,
       comments,
       shares: 0,
-      thumbnail: (i.displayUrl as string) || (i.imageUrl as string) || (i.thumbnailUrl as string),
-      url: (i.url as string) || (i.shortCode ? `https://www.instagram.com/p/${i.shortCode}/` : undefined),
-      engagementRate: followers > 0 ? parseFloat(((likes + comments) / followers * 100).toFixed(2)) : 0,
+      thumbnail:
+        (i.displayUrl as string) ||
+        (i.imageUrl as string) ||
+        (i.thumbnailUrl as string),
+      url:
+        (i.url as string) ||
+        (i.shortCode ? `https://www.instagram.com/p/${i.shortCode}/` : undefined),
+      engagementRate:
+        followers > 0
+          ? parseFloat(((likes + comments) / followers * 100).toFixed(2))
+          : 0,
     }
   })
 
   return {
     followers,
-    following: (profileItem.followingCount as number) || 0,
+    following,
     totalViews: posts.reduce((sum, p) => sum + p.views, 0),
     posts,
   }
@@ -39,10 +66,20 @@ export function parseInstagram(items: Record<string, unknown>[]): ProfileData {
 export function parseTikTok(items: Record<string, unknown>[]): ProfileData {
   if (!items.length) return { followers: 0, following: 0, totalViews: 0, posts: [] }
 
-  const authorMeta = (items[0].authorMeta as Record<string, unknown>) || {}
-  const followers = (authorMeta.fans as number) || 0
+  // Filter actual post items
+  const postItems = items.filter(
+    (i) => i.diggCount != null || i.playCount != null
+  )
 
-  const posts: Post[] = items.map((item, idx) => {
+  const authorMeta =
+    (postItems[0]?.authorMeta as Record<string, unknown>) ||
+    (items[0]?.authorMeta as Record<string, unknown>) ||
+    {}
+
+  const followers = (authorMeta.fans as number) || 0
+  const following = (authorMeta.following as number) || 0
+
+  const posts: Post[] = postItems.map((item, idx) => {
     const i = item as Record<string, unknown>
     const meta = (i.authorMeta as Record<string, unknown>) || {}
 
@@ -81,7 +118,7 @@ export function parseTikTok(items: Record<string, unknown>[]): ProfileData {
 
   return {
     followers,
-    following: (authorMeta.following as number) || 0,
+    following,
     totalViews: posts.reduce((sum, p) => sum + p.views, 0),
     posts,
   }
