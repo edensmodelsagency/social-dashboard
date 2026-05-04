@@ -32,6 +32,8 @@ export async function POST(req: NextRequest) {
           profiles: [`https://www.tiktok.com/@${username}`],
           resultsType: 'posts',
           maxPostsPerProfile: 30,
+          shouldDownloadVideos: false,
+          shouldDownloadCovers: false,
         }
 
   const runRes = await fetch(`https://api.apify.com/v2/acts/${actor}/runs?token=${TOKEN}`, {
