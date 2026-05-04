@@ -4,7 +4,7 @@ const TOKEN = process.env.APIFY_TOKEN!
 
 const ACTORS: Record<string, string> = {
   instagram: 'apify~instagram-scraper',
-  tiktok: 'clockworks~tiktok-scraper',
+  tiktok: 'clockworks~free-tiktok-scraper',
 }
 
 export async function POST(req: NextRequest) {
@@ -29,11 +29,12 @@ export async function POST(req: NextRequest) {
           addParentData: true,
         }
       : {
-          profiles: [`https://www.tiktok.com/@${username}`],
-          resultsType: 'posts',
+          postURLs: [],
+          profileURLs: [`https://www.tiktok.com/@${username}`],
           maxPostsPerProfile: 30,
           shouldDownloadVideos: false,
           shouldDownloadCovers: false,
+          proxyCountryCode: 'None',
         }
 
   const runRes = await fetch(`https://api.apify.com/v2/acts/${actor}/runs?token=${TOKEN}`, {
