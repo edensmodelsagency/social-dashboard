@@ -29,12 +29,11 @@ export async function POST(req: NextRequest) {
           addParentData: true,
         }
       : {
-          postURLs: [],
-          profileURLs: [`https://www.tiktok.com/@${username}`],
-          maxPostsPerProfile: 30,
+          profiles: [`https://www.tiktok.com/@${username}`],
+          resultsPerPage: 30,
           shouldDownloadVideos: false,
           shouldDownloadCovers: false,
-          proxyCountryCode: 'None',
+          shouldDownloadSubtitles: false,
         }
 
   const runRes = await fetch(`https://api.apify.com/v2/acts/${actor}/runs?token=${TOKEN}`, {

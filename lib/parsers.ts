@@ -39,55 +39,27 @@ export function parseInstagram(items: Record<string, unknown>[]): ProfileData {
 export function parseTikTok(items: Record<string, unknown>[]): ProfileData {
   if (!items.length) return { followers: 0, following: 0, totalViews: 0, posts: [] }
 
-  // authorMeta can be nested or at top level depending on the actor version
-  const first = items[0] as Record<string, unknown>
-  const authorMeta =
-    (first.authorMeta as Record<string, unknown>) ||
-    (first.author as Record<string, unknown>) ||
-    {}
-
-  // fans / followers field varies between actor versions
-  const followers =
-    (authorMeta.fans as number) ||
-    (authorMeta.followers as number) ||
-    (authorMeta.followerCount as number) ||
-    0
+  const authorMeta = (items[0].authorMeta as Record<string, unknown>) || {}
+  const followers = (authorMeta.fans as number) || 0
 
   const posts: Post[] = items.map((item, idx) => {
     const i = item as Record<string, unknown>
-    const meta =
-      (i.authorMeta as Record<string, unknown>) ||
-      (i.author as Record<string, unknown>) ||
-      {}
+    const meta = (i.authorMeta as Record<string, unknown>) || {}
 
-    const likes =
-      (i.diggCount as number) ||
-      (i.likeCount as number) ||
-      (i.heartCount as number) ||
-      0
-    const comments = (i.commentCount as number) || (i.comments as number) || 0
-    const views = (i.playCount as number) || (i.viewCount as number) || 0
+    const likes = (i.diggCount as number) || 0
+    const comments = (i.commentCount as number) || 0
+    const views = (i.playCount as number) || 0
     const shares = (i.shareCount as number) || 0
-    const saves = (i.collectCount as number) || (i.savedCount as number) || 0
+    const saves = (i.collectCount as number) || 0
 
     let date = (i.createTimeISO as string) || ''
     if (!date && i.createTime) {
       date = new Date((i.createTime as number) * 1000).toISOString()
     }
 
-    // covers can be an array or a single URL string
     const covers = (i.covers as string[]) || []
-    const thumbnail =
-      covers[0] ||
-      (i.coverUrl as string) ||
-      (i.thumbnail as string) ||
-      (i.cover as string)
-
-    const authorName =
-      (meta.name as string) ||
-      (meta.uniqueId as string) ||
-      (meta.id as string) ||
-      ''
+    const thumbnail = covers[0] || (i.coverUrl as string)
+    const authorName = (meta.name as string) || ''
 
     return {
       id: (i.id as string) || String(idx),
@@ -109,7 +81,7 @@ export function parseTikTok(items: Record<string, unknown>[]): ProfileData {
 
   return {
     followers,
-    following: (authorMeta.following as number) || (authorMeta.followingCount as number) || 0,
+    following: (authorMeta.following as number) || 0,
     totalViews: posts.reduce((sum, p) => sum + p.views, 0),
     posts,
   }
