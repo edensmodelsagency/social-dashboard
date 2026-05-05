@@ -48,17 +48,42 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ status: 'running' })
   }
 
-  // All succeeded — merge and deduplicate by id
-  const allItems = results.flatMap((r) =>
-    r.status === 'succeeded' ? r.items : []
-  )
+  // All succeeded — log per-run counts before merging
+  const succeededResults = results.filter((r) => r.status === 'succeeded') as {
+    status: 'succeeded'
+    items: Record<string, unknown>[]
+  }[]
+
+  // Log each run's item count and first item id separately
+  succeededResults.forEach((r, idx) => {
+    console.log(
+      `[scrape/status] run[${idx}] items=${r.items.length} firstId=${r.items[0]?.id ?? 'none'} firstShortCode=${r.items[0]?.shortCode ?? 'none'}`
+    )
+  })
+
+  // If exactly 2 runs (Instagram posts + reels), log them by name
+  if (succeededResults.length === 2) {
+    const postsItems = succeededResults[0].items
+    const reelsItems = succeededResults[1].items
+    console.log(
+      `[scrape/status] posts items: ${postsItems.length} reels items: ${reelsItems.length}`
+    )
+    console.log('[scrape/status] first post item id:', postsItems[0]?.id)
+    console.log('[scrape/status] first reel item id:', reelsItems[0]?.id)
+  }
+
+  const allItems = succeededResults.flatMap((r) => r.items)
 
   const seen = new Set<string>()
   const unique = allItems.filter((item) => {
     const id = (item.id as string) || (item.shortCode as string) || JSON.stringify(item).slice(0, 40)
-    if (seen.has(id)) return false
-    seen.add(id)
-    return true
+    const isDup = seen.has(id)
+    if (!isDup) seen.add(id)
+    // Log if a reel-type item is being dropped as duplicate
+    if (isDup && (item.type === 'video' || item.productType === 'clips')) {
+      console.log('[scrape/status] DUPLICATE reel dropped, id:', id)
+    }
+    return !isDup
   })
 
   console.log(
