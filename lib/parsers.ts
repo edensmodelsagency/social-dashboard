@@ -10,10 +10,20 @@ function n(v: unknown): number {
 export function parseInstagram(items: Record<string, unknown>[]): ProfileData {
   if (!items.length) return { followers: 0, following: 0, totalViews: 0, posts: [] }
 
-  // Filter actual post items (not profile-only metadata)
+  // Filter actual post/reel items — be as inclusive as possible.
+  // Reels from /reels/ endpoint may have productType:'clips' but no likesCount.
   const postItems = items.filter(
-    (i) => i.likesCount != null || i.likeCount != null || i.type != null
+    (i) =>
+      i.id != null ||
+      i.shortCode != null ||
+      i.likesCount != null ||
+      i.likeCount != null ||
+      i.type != null ||
+      i.productType != null ||
+      i.videoViewCount != null
   )
+
+  console.log('[parseInstagram] total items received:', items.length, '| passed filter:', postItems.length)
 
   // Profile data is embedded in each item via addParentData:true
   const profileItem = (
