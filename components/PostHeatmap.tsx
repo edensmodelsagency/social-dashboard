@@ -16,7 +16,9 @@ interface CellData {
   post?: Post
 }
 
-// Purple → pink gradient steps (visible on dark bg)
+// Hours to display: 10:00 → 23:00 → 00:00 → 01:00 → 02:00
+const DISPLAY_HOURS = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 0, 1, 2]
+
 const HEAT_COLORS = [
   '#1e2130', // empty
   '#3b1f4e', // very low
@@ -44,14 +46,13 @@ export function PostHeatmap({ posts }: Props) {
   } | null>(null)
 
   const { grid, days, maxViews } = useMemo(() => {
-    // Use 30 days so we capture all fetched posts
     const today = startOfDay(new Date())
     const days: Date[] = []
     for (let d = 29; d >= 0; d--) {
       days.push(subDays(today, d))
     }
 
-    // grid[hour][dayIdx]
+    // grid[hour][dayIdx] — indexed by real hour (0-23)
     const grid: CellData[][] = Array.from({ length: 24 }, () =>
       Array.from({ length: 30 }, () => ({ views: 0, engagement: 0 }))
     )
@@ -79,14 +80,10 @@ export function PostHeatmap({ posts }: Props) {
     return { grid, days, maxViews: max || 1 }
   }, [posts])
 
-  // Only show every 3rd hour label (0,3,6,9,12,15,18,21)
-  const showHourLabel = (h: number) => h % 3 === 0
-
-  // Show date labels every 5 days on mobile, every 3 on desktop
   const showDayLabel = (i: number) => i % 5 === 0 || i === 29
 
   const CELL = 22
-  const GAP = 2
+  const GAP = 3
 
   return (
     <div className="card" style={{ padding: 20 }}>
@@ -101,28 +98,29 @@ export function PostHeatmap({ posts }: Props) {
 
       <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
         <div style={{ display: 'flex', gap: GAP, minWidth: 'max-content' }}>
+
           {/* Hour label column */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: GAP, flexShrink: 0 }}>
-            {/* spacer for date row */}
-            <div style={{ height: 20 }} />
-            {Array.from({ length: 24 }, (_, h) => (
+            {DISPLAY_HOURS.map((h) => (
               <div
                 key={h}
                 style={{
                   height: CELL,
-                  width: 30,
+                  width: 34,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'flex-end',
                   paddingRight: 6,
                   fontSize: 10,
-                  color: showHourLabel(h) ? 'var(--text-2)' : 'transparent',
+                  color: 'var(--text-2)',
                   userSelect: 'none',
                 }}
               >
                 {String(h).padStart(2, '0')}:00
               </div>
             ))}
+            {/* Spacer matching the date label row at bottom */}
+            <div style={{ height: 24 }} />
           </div>
 
           {/* Day columns */}
@@ -131,27 +129,8 @@ export function PostHeatmap({ posts }: Props) {
               key={dayIdx}
               style={{ display: 'flex', flexDirection: 'column', gap: GAP, flexShrink: 0 }}
             >
-              {/* Date label */}
-              <div
-                style={{
-                  height: 20,
-                  width: CELL,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 9,
-                  color: showDayLabel(dayIdx) ? 'var(--text-2)' : 'transparent',
-                  userSelect: 'none',
-                  whiteSpace: 'nowrap',
-                  transform: 'rotate(-30deg)',
-                  transformOrigin: 'center',
-                }}
-              >
-                {format(day, 'dd/MM', { locale: el })}
-              </div>
-
-              {/* Hour cells */}
-              {Array.from({ length: 24 }, (_, hour) => {
+              {/* Hour cells — only DISPLAY_HOURS */}
+              {DISPLAY_HOURS.map((hour) => {
                 const cell = grid[hour][dayIdx]
                 const hasPost = cell.post != null
                 const bg = getColor(cell.views, maxViews)
@@ -170,10 +149,16 @@ export function PostHeatmap({ posts }: Props) {
                       }
                     }}
                     onMouseLeave={() => setTooltip(null)}
+                    onMouseOver={(e) => {
+                      if (hasPost) {
+                        ;(e.currentTarget as HTMLElement).style.transform = 'scale(1.25)'
+                        ;(e.currentTarget as HTMLElement).style.opacity = '0.9'
+                      }
+                    }}
                     style={{
                       width: CELL,
                       height: CELL,
-                      borderRadius: 3,
+                      borderRadius: 5,
                       background: bg,
                       cursor: hasPost ? 'pointer' : 'default',
                       border: hasPost
@@ -181,17 +166,29 @@ export function PostHeatmap({ posts }: Props) {
                         : '1px solid transparent',
                       transition: 'transform 0.08s, opacity 0.08s',
                     }}
-                    onMouseOver={(e) => {
-                      if (hasPost) {
-                        ;(e.currentTarget as HTMLElement).style.transform = 'scale(1.25)'
-                        ;(e.currentTarget as HTMLElement).style.opacity = '0.9'
-                      }
-                    }}
-                    onFocus={() => {}}
-                    onBlur={() => {}}
                   />
                 )
               })}
+
+              {/* Date label at BOTTOM */}
+              <div
+                style={{
+                  height: 24,
+                  width: CELL,
+                  display: 'flex',
+                  alignItems: 'flex-end',
+                  justifyContent: 'center',
+                  paddingBottom: 2,
+                  fontSize: 9,
+                  color: showDayLabel(dayIdx) ? 'var(--text-2)' : 'transparent',
+                  userSelect: 'none',
+                  whiteSpace: 'nowrap',
+                  transform: 'rotate(-45deg)',
+                  transformOrigin: 'top center',
+                }}
+              >
+                {format(day, 'dd/MM', { locale: el })}
+              </div>
             </div>
           ))}
         </div>
@@ -203,7 +200,7 @@ export function PostHeatmap({ posts }: Props) {
           display: 'flex',
           alignItems: 'center',
           gap: 6,
-          marginTop: 12,
+          marginTop: 16,
           fontSize: 11,
           color: 'var(--text-3)',
         }}
@@ -216,7 +213,7 @@ export function PostHeatmap({ posts }: Props) {
               width: 14,
               height: 14,
               background: c,
-              borderRadius: 3,
+              borderRadius: 4,
               border: '1px solid rgba(255,255,255,0.08)',
             }}
           />
@@ -268,9 +265,7 @@ export function PostHeatmap({ posts }: Props) {
             {tooltip.post.shares > 0 && (
               <span>🔁 {fmt(tooltip.post.shares)} κοινοποιήσεις</span>
             )}
-            <span
-              style={{ color: 'var(--accent)', fontWeight: 600, marginTop: 2 }}
-            >
+            <span style={{ color: 'var(--accent)', fontWeight: 600, marginTop: 2 }}>
               Eng. {tooltip.post.engagementRate.toFixed(2)}%
             </span>
           </div>
