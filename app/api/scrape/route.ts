@@ -35,6 +35,7 @@ export async function POST(req: NextRequest) {
   try {
     if (platform === 'instagram') {
       // Run posts + reels scrapes in parallel
+      // Second run uses resultsType:'reels' — the actor treats /reels/ URL differently
       const [postsRunId, reelsRunId] = await Promise.all([
         startRun(actor, {
           directUrls: [`https://www.instagram.com/${username}/`],
@@ -45,7 +46,7 @@ export async function POST(req: NextRequest) {
         }),
         startRun(actor, {
           directUrls: [`https://www.instagram.com/${username}/reels/`],
-          resultsType: 'posts',
+          resultsType: 'reels',
           resultsLimit: 50,
           addParentData: true,
           maxRequestRetries: 3,

@@ -70,6 +70,10 @@ export async function GET(req: NextRequest) {
     )
     console.log('[scrape/status] first post item id:', postsItems[0]?.id)
     console.log('[scrape/status] first reel item id:', reelsItems[0]?.id)
+    // Log first reel item keys to see what the actor actually returns for reels
+    if (reelsItems[0]) {
+      console.log('[scrape/status] first reel item keys:', Object.keys(reelsItems[0]).join(', '))
+    }
   }
 
   const allItems = succeededResults.flatMap((r) => r.items)
@@ -87,7 +91,7 @@ export async function GET(req: NextRequest) {
   })
 
   console.log(
-    `[scrape/status] runIds=${runIds.join(',')} total=${allItems.length} unique=${unique.length}`
+    `[scrape/status] runIds=${runIds.join(',')} total=${allItems.length} unique=${unique.length} (merged: ${unique.length})`
   )
 
   // Log view-count fields on first video item to diagnose reel parsing
