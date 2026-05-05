@@ -1,5 +1,12 @@
 import { Post, ProfileData } from './types'
 
+// Safe numeric conversion — handles string numbers, null, undefined
+function n(v: unknown): number {
+  if (v == null) return 0
+  const num = Number(v)
+  return isNaN(num) ? 0 : num
+}
+
 export function parseInstagram(items: Record<string, unknown>[]): ProfileData {
   if (!items.length) return { followers: 0, following: 0, totalViews: 0, posts: [] }
 
@@ -10,23 +17,25 @@ export function parseInstagram(items: Record<string, unknown>[]): ProfileData {
 
   // Profile data is embedded in each item via addParentData:true
   const profileItem = (
-    postItems.find((i) => (i.followersCount as number) > 0) ||
+    postItems.find((i) => n(i.followersCount) > 0) ||
     postItems[0] ||
     items[0]
   ) as Record<string, unknown>
 
-  const followers = (profileItem.followersCount as number) || 0
-  const following =
-    (profileItem.followingCount as number) ||
-    (profileItem.followsCount as number) ||
-    0
+  const followers = n(profileItem.followersCount)
+  const following = n(profileItem.followingCount) || n(profileItem.followsCount)
 
   const posts: Post[] = postItems.map((item, idx) => {
     const i = item as Record<string, unknown>
-    const likes = (i.likesCount as number) || (i.likeCount as number) || 0
-    const comments = (i.commentsCount as number) || (i.commentCount as number) || 0
-    const views = (i.videoViewCount as number) || (i.videoPlayCount as number) || 0
-    const saves = (i.saves as number) || 0
+    const likes    = n(i.likesCount)    || n(i.likeCount)
+    const comments = n(i.commentsCount) || n(i.commentCount)
+    const saves    = n(i.saves)         || n(i.savesCount)
+    // videoViewCount / videoPlayCount / playCount — all possible field names for reels
+    const views =
+      n(i.videoViewCount) ||
+      n(i.videoPlayCount) ||
+      n(i.playCount)      ||
+      n(i.viewCount)
 
     let type: Post['type'] = 'Photo'
     if (i.productType === 'clips' || i.type === 'video') type = 'Reel'
@@ -76,18 +85,18 @@ export function parseTikTok(items: Record<string, unknown>[]): ProfileData {
     (items[0]?.authorMeta as Record<string, unknown>) ||
     {}
 
-  const followers = (authorMeta.fans as number) || 0
-  const following = (authorMeta.following as number) || 0
+  const followers = n(authorMeta.fans)
+  const following = n(authorMeta.following)
 
   const posts: Post[] = postItems.map((item, idx) => {
     const i = item as Record<string, unknown>
     const meta = (i.authorMeta as Record<string, unknown>) || {}
 
-    const likes = (i.diggCount as number) || 0
-    const comments = (i.commentCount as number) || 0
-    const views = (i.playCount as number) || 0
-    const shares = (i.shareCount as number) || 0
-    const saves = (i.collectCount as number) || 0
+    const likes    = n(i.diggCount)
+    const comments = n(i.commentCount)
+    const views    = n(i.playCount)
+    const shares   = n(i.shareCount)
+    const saves    = n(i.collectCount)
 
     let date = (i.createTimeISO as string) || ''
     if (!date && i.createTime) {

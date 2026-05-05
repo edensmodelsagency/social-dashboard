@@ -65,6 +65,19 @@ export async function GET(req: NextRequest) {
     `[scrape/status] runIds=${runIds.join(',')} total=${allItems.length} unique=${unique.length}`
   )
 
+  // Log view-count fields on first video item to diagnose reel parsing
+  const firstVideo = unique.find((i) => i.type === 'video' || i.productType === 'clips')
+  if (firstVideo) {
+    console.log('[scrape/status] first reel fields:', JSON.stringify({
+      type: firstVideo.type,
+      productType: firstVideo.productType,
+      videoViewCount: firstVideo.videoViewCount,
+      videoPlayCount: firstVideo.videoPlayCount,
+      playCount: firstVideo.playCount,
+      viewCount: firstVideo.viewCount,
+    }))
+  }
+
   if (unique.length === 0) {
     return NextResponse.json(
       { status: 'failed', error: 'Δεν βρέθηκαν δεδομένα. Το προφίλ μπορεί να είναι private.' },

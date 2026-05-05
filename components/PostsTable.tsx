@@ -215,7 +215,12 @@ export function PostsTable({ posts, platform }: Props) {
                       color: 'var(--text)',
                     }}
                   >
-                    {fmt(post.views) === '0' ? '—' : fmt(post.views)}
+                    {/* Reels/Videos always have a view count — only Photos may lack one */}
+                    {post.views > 0
+                      ? fmt(post.views)
+                      : post.type === 'Photo' || post.type === 'Carousel'
+                      ? '—'
+                      : '0'}
                   </td>
 
                   {/* Likes */}
