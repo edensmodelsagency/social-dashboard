@@ -29,7 +29,7 @@ export function parseInstagram(items: Record<string, unknown>[]): ProfileData {
     const saves = (i.saves as number) || 0
 
     let type: Post['type'] = 'Photo'
-    if (i.type === 'video') type = 'Reel'
+    if (i.productType === 'clips' || i.type === 'video') type = 'Reel'
     else if (i.type === 'sidecar') type = 'Carousel'
 
     return {

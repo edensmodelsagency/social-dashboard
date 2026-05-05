@@ -146,13 +146,14 @@ export default function Dashboard() {
         const startJson = await startRes.json()
         if (!startRes.ok || startJson.error) throw new Error(startJson.error || 'Αποτυχία εκκίνησης')
 
-        const { runId } = startJson
+        const { runIds } = startJson
+        if (!runIds?.length) throw new Error('Δεν επιστράφηκαν run IDs')
 
         // Poll for status every 5s, max 2.5 min
         let items: Record<string, unknown>[] | null = null
         for (let i = 0; i < 30; i++) {
           await new Promise((r) => setTimeout(r, 5000))
-          const pollRes = await fetch(`/api/scrape/status?runId=${runId}`)
+          const pollRes = await fetch(`/api/scrape/status?runIds=${runIds.join(',')}`)
           const pollJson = await pollRes.json()
 
           if (pollJson.status === 'succeeded') {
