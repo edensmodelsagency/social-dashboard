@@ -25,8 +25,9 @@ export async function POST(req: NextRequest) {
       ? {
           directUrls: [`https://www.instagram.com/${username}/`],
           resultsType: 'posts',
-          resultsLimit: 30,
+          resultsLimit: 50,
           addParentData: true,
+          maxRequestRetries: 3,
         }
       : {
           profiles: [`https://www.tiktok.com/@${username}`],

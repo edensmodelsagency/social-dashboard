@@ -25,6 +25,8 @@ export async function GET(req: NextRequest) {
   )
   const items = await resData.json()
 
+  console.log(`[scrape/status] runId=${runId} items=${Array.isArray(items) ? items.length : 'not-array'}`)
+
   if (!Array.isArray(items) || items.length === 0) {
     return NextResponse.json(
       { status: 'failed', error: 'Δεν βρέθηκαν δεδομένα. Το προφίλ μπορεί να είναι private.' },
