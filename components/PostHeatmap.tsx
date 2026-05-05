@@ -16,8 +16,8 @@ interface CellData {
   post?: Post
 }
 
-// Hours to display: 10:00 → 23:00 → 00:00 → 01:00 → 02:00
-const DISPLAY_HOURS = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 0, 1, 2]
+// Hours to display: 02:00 at top → 10:00 at bottom (bottom-to-top reading: 10→02)
+const DISPLAY_HOURS = [2, 1, 0, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10]
 
 const HEAT_COLORS = [
   '#1e2130', // empty
