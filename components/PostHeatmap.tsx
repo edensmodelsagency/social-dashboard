@@ -16,7 +16,7 @@ interface CellData {
   post?: Post
 }
 
-// Hours to display: 02:00 at top → 10:00 at bottom (bottom-to-top reading: 10→02)
+// Hours displayed bottom-to-top reading order: 10 at bottom → 02 at top
 const DISPLAY_HOURS = [2, 1, 0, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10]
 
 const HEAT_COLORS = [
@@ -38,12 +38,20 @@ function getColor(views: number, max: number): string {
   return HEAT_COLORS[5]
 }
 
+const CROSSHAIR_COLOR = 'rgba(236, 72, 153, 0.28)'
+const CROSSHAIR_HOVERED = 'rgba(236, 72, 153, 0.55)'
+const GRID_LINE = '1px dashed rgba(255,255,255,0.08)'
+const CELL = 22
+const GAP = 3
+
 export function PostHeatmap({ posts }: Props) {
   const [tooltip, setTooltip] = useState<{
     post: Post
     x: number
     y: number
   } | null>(null)
+
+  const [hovered, setHovered] = useState<{ hIdx: number; dIdx: number } | null>(null)
 
   const { grid, days, maxViews } = useMemo(() => {
     const today = startOfDay(new Date())
@@ -52,7 +60,7 @@ export function PostHeatmap({ posts }: Props) {
       days.push(subDays(today, d))
     }
 
-    // grid[hour][dayIdx] — indexed by real hour (0-23)
+    // grid[hour][dayIdx] — indexed by real clock hour (0-23)
     const grid: CellData[][] = Array.from({ length: 24 }, () =>
       Array.from({ length: 30 }, () => ({ views: 0, engagement: 0 }))
     )
@@ -82,8 +90,29 @@ export function PostHeatmap({ posts }: Props) {
 
   const showDayLabel = (i: number) => i % 5 === 0 || i === 29
 
-  const CELL = 22
-  const GAP = 3
+  function handleCellEnter(
+    e: React.MouseEvent<HTMLDivElement>,
+    hIdx: number,
+    dIdx: number,
+    cell: CellData
+  ) {
+    setHovered({ hIdx, dIdx })
+    if (cell.post) {
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+      setTooltip({
+        post: cell.post,
+        x: Math.min(rect.left + 28, window.innerWidth - 230),
+        y: rect.bottom + 8,
+      })
+    } else {
+      setTooltip(null)
+    }
+  }
+
+  function handleGridLeave() {
+    setHovered(null)
+    setTooltip(null)
+  }
 
   return (
     <div className="card" style={{ padding: 20 }}>
@@ -96,12 +125,12 @@ export function PostHeatmap({ posts }: Props) {
         </div>
       </div>
 
-      <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
+      <div style={{ overflowX: 'auto', paddingBottom: 4 }} onMouseLeave={handleGridLeave}>
         <div style={{ display: 'flex', gap: GAP, minWidth: 'max-content' }}>
 
           {/* Hour label column */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: GAP, flexShrink: 0 }}>
-            {DISPLAY_HOURS.map((h) => (
+            {DISPLAY_HOURS.map((h, hIdx) => (
               <div
                 key={h}
                 style={{
@@ -112,65 +141,72 @@ export function PostHeatmap({ posts }: Props) {
                   justifyContent: 'flex-end',
                   paddingRight: 6,
                   fontSize: 10,
-                  color: 'var(--text-2)',
+                  color: hovered?.hIdx === hIdx ? '#ec4899' : 'var(--text-2)',
+                  fontWeight: hovered?.hIdx === hIdx ? 700 : 400,
                   userSelect: 'none',
+                  transition: 'color 0.1s',
                 }}
               >
                 {String(h).padStart(2, '0')}:00
               </div>
             ))}
-            {/* Spacer matching the date label row at bottom */}
+            {/* Spacer matching date label row */}
             <div style={{ height: 24 }} />
           </div>
 
           {/* Day columns */}
-          {days.map((day, dayIdx) => (
+          {days.map((day, dIdx) => (
             <div
-              key={dayIdx}
+              key={dIdx}
               style={{ display: 'flex', flexDirection: 'column', gap: GAP, flexShrink: 0 }}
             >
-              {/* Hour cells — only DISPLAY_HOURS */}
-              {DISPLAY_HOURS.map((hour) => {
-                const cell = grid[hour][dayIdx]
+              {DISPLAY_HOURS.map((hour, hIdx) => {
+                const cell = grid[hour][dIdx]
                 const hasPost = cell.post != null
                 const bg = getColor(cell.views, maxViews)
+
+                const isHoveredCell = hovered?.hIdx === hIdx && hovered?.dIdx === dIdx
+                const inCrosshair = hovered != null && (hovered.hIdx === hIdx || hovered.dIdx === dIdx)
 
                 return (
                   <div
                     key={hour}
-                    onMouseEnter={(e) => {
-                      if (hasPost && cell.post) {
-                        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-                        setTooltip({
-                          post: cell.post,
-                          x: Math.min(rect.left, window.innerWidth - 220),
-                          y: rect.bottom + 8,
-                        })
-                      }
-                    }}
-                    onMouseLeave={() => setTooltip(null)}
-                    onMouseOver={(e) => {
-                      if (hasPost) {
-                        ;(e.currentTarget as HTMLElement).style.transform = 'scale(1.25)'
-                        ;(e.currentTarget as HTMLElement).style.opacity = '0.9'
-                      }
-                    }}
+                    onMouseEnter={(e) => handleCellEnter(e, hIdx, dIdx, cell)}
                     style={{
+                      position: 'relative',
                       width: CELL,
                       height: CELL,
                       borderRadius: 5,
                       background: bg,
                       cursor: hasPost ? 'pointer' : 'default',
-                      border: hasPost
-                        ? `1px solid ${bg === HEAT_COLORS[5] ? '#f0476c88' : '#9333ea55'}`
-                        : '1px solid transparent',
-                      transition: 'transform 0.08s, opacity 0.08s',
+                      border: GRID_LINE,
+                      boxSizing: 'border-box',
+                      transition: 'transform 0.08s',
+                      transform: isHoveredCell ? 'scale(1.3)' : 'none',
+                      zIndex: isHoveredCell ? 10 : 1,
+                      boxShadow: isHoveredCell && hasPost
+                        ? `0 0 10px 3px ${bg}cc`
+                        : 'none',
+                      filter: isHoveredCell && hasPost ? 'brightness(1.4) saturate(1.5)' : 'none',
                     }}
-                  />
+                  >
+                    {/* Crosshair overlay */}
+                    {inCrosshair && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          inset: 0,
+                          borderRadius: 4,
+                          background: isHoveredCell ? CROSSHAIR_HOVERED : CROSSHAIR_COLOR,
+                          pointerEvents: 'none',
+                        }}
+                      />
+                    )}
+                  </div>
                 )
               })}
 
-              {/* Date label at BOTTOM */}
+              {/* Date label at bottom */}
               <div
                 style={{
                   height: 24,
@@ -180,11 +216,15 @@ export function PostHeatmap({ posts }: Props) {
                   justifyContent: 'center',
                   paddingBottom: 2,
                   fontSize: 9,
-                  color: showDayLabel(dayIdx) ? 'var(--text-2)' : 'transparent',
+                  color: showDayLabel(dIdx)
+                    ? hovered?.dIdx === dIdx ? '#ec4899' : 'var(--text-2)'
+                    : 'transparent',
+                  fontWeight: hovered?.dIdx === dIdx ? 700 : 400,
                   userSelect: 'none',
                   whiteSpace: 'nowrap',
                   transform: 'rotate(-45deg)',
                   transformOrigin: 'top center',
+                  transition: 'color 0.1s',
                 }}
               >
                 {format(day, 'dd/MM', { locale: el })}
@@ -214,7 +254,7 @@ export function PostHeatmap({ posts }: Props) {
               height: 14,
               background: c,
               borderRadius: 4,
-              border: '1px solid rgba(255,255,255,0.08)',
+              border: GRID_LINE,
             }}
           />
         ))}
@@ -237,7 +277,7 @@ export function PostHeatmap({ posts }: Props) {
             zIndex: 9999,
             pointerEvents: 'none',
             boxShadow: '0 12px 32px rgba(0,0,0,0.5)',
-            minWidth: 190,
+            minWidth: 200,
           }}
         >
           <div
@@ -251,14 +291,7 @@ export function PostHeatmap({ posts }: Props) {
             {tooltip.post.type} ·{' '}
             {format(new Date(tooltip.post.date), 'dd MMM, HH:mm', { locale: el })}
           </div>
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 4,
-              color: 'var(--text-2)',
-            }}
-          >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, color: 'var(--text-2)' }}>
             <span>👁 {fmt(tooltip.post.views)} προβολές</span>
             <span>❤️ {fmt(tooltip.post.likes)} likes</span>
             <span>💬 {fmt(tooltip.post.comments)} σχόλια</span>
