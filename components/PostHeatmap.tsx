@@ -56,13 +56,13 @@ export function PostHeatmap({ posts }: Props) {
   const { grid, days, maxViews } = useMemo(() => {
     const today = startOfDay(new Date())
     const days: Date[] = []
-    for (let d = 29; d >= 0; d--) {
+    for (let d = 9; d >= 0; d--) {
       days.push(subDays(today, d))
     }
 
     // grid[hour][dayIdx] — indexed by real clock hour (0-23)
     const grid: CellData[][] = Array.from({ length: 24 }, () =>
-      Array.from({ length: 30 }, () => ({ views: 0, engagement: 0 }))
+      Array.from({ length: 10 }, () => ({ views: 0, engagement: 0 }))
     )
 
     let max = 0
@@ -88,7 +88,7 @@ export function PostHeatmap({ posts }: Props) {
     return { grid, days, maxViews: max || 1 }
   }, [posts])
 
-  const showDayLabel = (i: number) => i % 5 === 0 || i === 29
+  const showDayLabel = (_i: number) => true // always show all 10 labels
 
   function handleCellEnter(
     e: React.MouseEvent<HTMLDivElement>,
@@ -121,7 +121,7 @@ export function PostHeatmap({ posts }: Props) {
           Δραστηριότητα Δημοσίευσης
         </div>
         <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2 }}>
-          Τελευταίες 30 ημέρες · ώρα × ημέρα · χρώμα = προβολές
+          Τελευταίες 10 ημέρες · ώρα × ημέρα · χρώμα = προβολές
         </div>
       </div>
 
