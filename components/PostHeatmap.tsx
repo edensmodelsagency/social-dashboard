@@ -38,8 +38,6 @@ function getColor(views: number, max: number): string {
   return HEAT_COLORS[5]
 }
 
-const CROSSHAIR_COLOR = 'rgba(236, 72, 153, 0.28)'
-const CROSSHAIR_HOVERED = 'rgba(236, 72, 153, 0.55)'
 const GRID_LINE = '1px dashed rgba(255,255,255,0.08)'
 const GAP = 4
 const Y_AXIS_W = 48  // width of the hour-label column
@@ -69,7 +67,7 @@ export function PostHeatmap({ posts }: Props) {
     : 40
 
   const [tooltip, setTooltip] = useState<{ post: Post; x: number; y: number } | null>(null)
-  const [hovered, setHovered] = useState<{ hIdx: number; dIdx: number } | null>(null)
+  const [hoveredCell, setHoveredCell] = useState<string | null>(null) // "hIdx-dIdx"
 
   const { grid, days, maxViews } = useMemo(() => {
     const today = startOfDay(new Date())
@@ -106,7 +104,7 @@ export function PostHeatmap({ posts }: Props) {
     dIdx: number,
     cell: CellData
   ) {
-    setHovered({ hIdx, dIdx })
+    setHoveredCell(`${hIdx}-${dIdx}`)
     if (cell.post) {
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
       setTooltip({
@@ -135,7 +133,7 @@ export function PostHeatmap({ posts }: Props) {
       <div
         ref={containerRef}
         style={{ width: '100%' }}
-        onMouseLeave={() => { setHovered(null); setTooltip(null) }}
+        onMouseLeave={() => { setHoveredCell(null); setTooltip(null) }}
       >
         <div style={{ display: 'flex', gap: GAP, width: '100%' }}>
 
@@ -149,10 +147,8 @@ export function PostHeatmap({ posts }: Props) {
                   display: 'flex',
                   alignItems: 'center',
                   fontSize: 11,
-                  color: hovered?.hIdx === hIdx ? '#ec4899' : 'var(--text-2)',
-                  fontWeight: hovered?.hIdx === hIdx ? 700 : 400,
+                  color: 'var(--text-2)',
                   userSelect: 'none',
-                  transition: 'color 0.1s',
                   paddingRight: 8,
                   justifyContent: 'flex-end',
                   whiteSpace: 'nowrap',
@@ -181,41 +177,26 @@ export function PostHeatmap({ posts }: Props) {
                 const cell = grid[hour][dIdx]
                 const hasPost = cell.post != null
                 const bg = getColor(cell.views, maxViews)
-                const isHoveredCell = hovered?.hIdx === hIdx && hovered?.dIdx === dIdx
-                const inCrosshair = hovered != null && (hovered.hIdx === hIdx || hovered.dIdx === dIdx)
+                const isHoveredCell = hoveredCell === `${hIdx}-${dIdx}`
 
                 return (
                   <div
                     key={hour}
                     onMouseEnter={(e) => handleCellEnter(e, hIdx, dIdx, cell)}
                     style={{
-                      position: 'relative',
                       width: '100%',
                       height: CELL_H,
                       borderRadius: 6,
                       background: bg,
                       cursor: hasPost ? 'pointer' : 'default',
-                      border: GRID_LINE,
+                      border: isHoveredCell && hasPost
+                        ? '1px solid rgba(255,255,255,0.5)'
+                        : GRID_LINE,
                       boxSizing: 'border-box',
-                      transition: 'transform 0.08s',
-                      transform: isHoveredCell ? 'scale(1.08)' : 'none',
-                      zIndex: isHoveredCell ? 10 : 1,
-                      boxShadow: isHoveredCell && hasPost ? `0 0 12px 3px ${bg}cc` : 'none',
-                      filter: isHoveredCell && hasPost ? 'brightness(1.4) saturate(1.5)' : 'none',
+                      transition: 'filter 0.1s, border-color 0.1s',
+                      filter: isHoveredCell && hasPost ? 'brightness(1.4) saturate(1.3)' : 'none',
                     }}
-                  >
-                    {inCrosshair && (
-                      <div
-                        style={{
-                          position: 'absolute',
-                          inset: 0,
-                          borderRadius: 5,
-                          background: isHoveredCell ? CROSSHAIR_HOVERED : CROSSHAIR_COLOR,
-                          pointerEvents: 'none',
-                        }}
-                      />
-                    )}
-                  </div>
+                  />
                 )
               })}
 
@@ -227,11 +208,9 @@ export function PostHeatmap({ posts }: Props) {
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontSize: 10,
-                  color: hovered?.dIdx === dIdx ? '#ec4899' : 'var(--text-2)',
-                  fontWeight: hovered?.dIdx === dIdx ? 700 : 400,
+                  color: 'var(--text-2)',
                   userSelect: 'none',
                   whiteSpace: 'nowrap',
-                  transition: 'color 0.1s',
                 }}
               >
                 {format(day, 'dd/MM', { locale: el })}
