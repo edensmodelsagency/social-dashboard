@@ -8,6 +8,45 @@ import { el } from 'date-fns/locale'
 import { ChevronUp, ChevronDown } from 'lucide-react'
 import Image from 'next/image'
 
+function ThumbnailCell({ post }: { post: Post }) {
+  const [failed, setFailed] = useState(false)
+  const proxySrc = post.thumbnail
+    ? `/api/thumbnail?url=${encodeURIComponent(post.thumbnail)}`
+    : null
+  const emoji = post.type === 'Reel' || post.type === 'Video' ? '🎬' : '🖼'
+
+  return (
+    <div
+      style={{
+        width: 44,
+        height: 44,
+        borderRadius: 6,
+        overflow: 'hidden',
+        background: 'var(--bg-subtle)',
+        border: '1px solid var(--border)',
+        flexShrink: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      {proxySrc && !failed ? (
+        <Image
+          src={proxySrc}
+          alt=""
+          width={44}
+          height={44}
+          style={{ objectFit: 'cover', width: '100%', height: '100%' }}
+          unoptimized
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <span style={{ fontSize: 20 }}>{emoji}</span>
+      )}
+    </div>
+  )
+}
+
 interface Props {
   posts: Post[]
   platform: 'instagram' | 'tiktok'
@@ -137,41 +176,7 @@ export function PostsTable({ posts, platform }: Props) {
                 >
                   {/* Thumbnail */}
                   <td style={{ padding: '8px 12px', width: 56 }}>
-                    <div
-                      style={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: 6,
-                        overflow: 'hidden',
-                        background: 'var(--bg-subtle)',
-                        border: '1px solid var(--border)',
-                        flexShrink: 0,
-                      }}
-                    >
-                      {post.thumbnail ? (
-                        <Image
-                          src={post.thumbnail}
-                          alt=""
-                          width={44}
-                          height={44}
-                          style={{ objectFit: 'cover', width: '100%', height: '100%' }}
-                          unoptimized
-                        />
-                      ) : (
-                        <div
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: 18,
-                          }}
-                        >
-                          {post.type === 'Reel' || post.type === 'Video' ? '🎬' : '🖼'}
-                        </div>
-                      )}
-                    </div>
+                    <ThumbnailCell post={post} />
                   </td>
 
                   {/* Date */}

@@ -21,7 +21,10 @@ export async function PATCH(
   const body = await req.json()
   if (!supabase) return NextResponse.json({ ok: true })
 
-  const { error } = await supabase.from('profiles').update(body).eq('id', id)
+  // Use upsert so the row is always fully overwritten with the latest data
+  const { error } = await supabase
+    .from('profiles')
+    .upsert({ id, ...body }, { onConflict: 'id' })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }

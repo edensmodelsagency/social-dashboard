@@ -550,6 +550,11 @@ function ProfileHeader({
   const platformLabel = platform === 'instagram' ? 'Instagram' : 'TikTok'
   const PlatformIcon = platform === 'instagram' ? Instagram : Music2
 
+  const isStale =
+    profile.last_scraped_at
+      ? Date.now() - new Date(profile.last_scraped_at).getTime() > 24 * 60 * 60 * 1000
+      : false
+
   return (
     <div
       style={{
@@ -577,13 +582,7 @@ function ProfileHeader({
           {profile.username.substring(0, 2).toUpperCase()}
         </div>
         <div>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-            }}
-          >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)' }}>
               @{profile.username}
             </span>
@@ -602,9 +601,27 @@ function ProfileHeader({
             >
               <PlatformIcon size={11} /> {platformLabel}
             </span>
+            {isStale && (
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  padding: '2px 8px',
+                  borderRadius: 99,
+                  fontSize: 11,
+                  fontWeight: 500,
+                  background: 'rgba(245,158,11,0.15)',
+                  color: '#f59e0b',
+                  border: '1px solid rgba(245,158,11,0.3)',
+                }}
+              >
+                <AlertCircle size={10} /> Δεδομένα &gt;24ω
+              </span>
+            )}
           </div>
           {profile.last_scraped_at && (
-            <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>
+            <div style={{ fontSize: 11, color: isStale ? '#f59e0b' : 'var(--text-3)', marginTop: 2 }}>
               Τελευταία ανάλυση:{' '}
               {new Date(profile.last_scraped_at).toLocaleString('el-GR', {
                 day: '2-digit',
